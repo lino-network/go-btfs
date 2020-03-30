@@ -1,13 +1,9 @@
 package upload
 
 import (
-	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
-	"github.com/TRON-US/go-btfs/core/commands/store/upload/ds"
-	"github.com/TRON-US/go-btfs/core/guard"
-	shardpb "github.com/TRON-US/go-btfs/protos/shard"
-
+	"fmt"
 	cmds "github.com/TRON-US/go-btfs-cmds"
-	nodepb "github.com/tron-us/go-btfs-common/protos/node"
+	"github.com/prometheus/common/log"
 )
 
 var StorageUploadRecvContractCmd = &cmds.Command{
@@ -22,34 +18,25 @@ var StorageUploadRecvContractCmd = &cmds.Command{
 		cmds.StringArg("guard-contract", true, false, "Signed Guard contract."),
 	},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		escrowContractBytes := []byte(req.Arguments[3])
-		guardContractBytes := []byte(req.Arguments[4])
-		ssID := req.Arguments[0]
-		n, err := cmdenv.GetNode(env)
-		if err != nil {
-			return err
-		}
+		ssId := req.Arguments[0]
 		shardHash := req.Arguments[1]
-		ss, err := ds.GetSession(ssID, nodepb.ContractStat_RENTER.String(), n.Identity.Pretty(), nil)
+		//TODO: log.debugf
+		fmt.Println("recv contract", ssId, shardHash)
+		ctxParams, err := extractContextParams(req, env)
 		if err != nil {
+			log.Errorf("recv contract err:%s", err.Error())
 			return err
 		}
-		s, err := ds.GetShard(n.Identity.Pretty(), ss.Role, ssID, shardHash, &ds.ShardInitParams{
-			Context:   ss.Context,
-			Datastore: n.Repo.Datastore(),
-		})
+		rs, err := GetRenterShard(ctxParams, ssId, shardHash)
 		if err != nil {
+			log.Errorf("recv contract err:%s", err.Error())
 			return err
 		}
-		guardContract, err := guard.UnmarshalGuardContract(guardContractBytes)
+		err = rs.contract([]byte(req.Arguments[3]), []byte(req.Arguments[4]))
 		if err != nil {
+			log.Errorf("recv contract err:%s", err.Error())
 			return err
 		}
-		s.Contract(&shardpb.SingedContracts{
-			SignedEscrowContract: escrowContractBytes,
-			GuardContract:        guardContract,
-		})
-		s.Complete()
 		return nil
 	},
 }

@@ -26,6 +26,7 @@ type HostsProvider struct {
 
 func getHostsProvider(cp *ContextParams) *HostsProvider {
 	p := &HostsProvider{
+		cp:      cp,
 		mode:    cp.cfg.Experimental.HostsSyncMode,
 		current: -1,
 		filter: func() bool {

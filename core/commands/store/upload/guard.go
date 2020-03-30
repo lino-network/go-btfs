@@ -33,7 +33,7 @@ type ContractParams struct {
 	TotalPay      int64
 }
 
-func renterSignGuardContract(ctxParams *ContextParams, params *ContractParams) ([]byte, error) {
+func renterSignGuardContract(ctxParams *ContextParams, params *ContractParams, offlineSigning bool) ([]byte, error) {
 	guardPid, escrowPid, err := getGuardAndEscrowPid(ctxParams.cfg)
 	if err != nil {
 		return nil, err
@@ -61,13 +61,11 @@ func renterSignGuardContract(ctxParams *ContextParams, params *ContractParams) (
 	cont.PreparerPid = cont.RenterPid
 	bc := make(chan []byte)
 	guardChanMaps.Set(gm.ContractId, bc)
-	//FIXME
-	onlineSigning := true
-	if onlineSigning {
+	if !offlineSigning {
 		go func() {
 			sign, err := crypto.Sign(ctxParams.n.PrivateKey, gm)
 			if err != nil {
-				// TODO: error
+				// TODO: handle error
 				return
 			}
 			bc <- sign

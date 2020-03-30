@@ -2,12 +2,10 @@ package upload
 
 import (
 	"fmt"
-
-	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
-	"github.com/TRON-US/go-btfs/core/commands/store/upload/ds"
+	"github.com/gogo/protobuf/proto"
+	guardPb "github.com/tron-us/go-btfs-common/protos/guard"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
-	nodepb "github.com/tron-us/go-btfs-common/protos/node"
 )
 
 var StorageUploadStatusCmd = &cmds.Command{
@@ -22,68 +20,38 @@ This command print upload and payment status by the time queried.`,
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
 		status := &StatusRes{}
 		// check and get session info from sessionMap
-		ssID := req.Arguments[0]
-		// get hosts
-		cfg, err := cmdenv.GetConfig(env)
+		ssId := req.Arguments[0]
+		ctxParams, err := extractContextParams(req, env)
 		if err != nil {
 			return err
 		}
-
-		// get node
-		n, err := cmdenv.GetNode(env)
-		if err != nil {
-			return err
-		}
-
-		// get core api
-		api, err := cmdenv.GetApi(env, req)
-		if err != nil {
-			return err
-		}
-
-		ss, err := ds.GetSession(ssID, nodepb.ContractStat_RENTER.String(), n.Identity.Pretty(), &ds.SessionInitParams{
-			Context:   req.Context,
-			Config:    cfg,
-			Datastore: n.Repo.Datastore(),
-			N:         n,
-			Api:       api,
-			RenterId:  n.Identity.Pretty(),
-		})
-		if err != nil {
-			return err
-		}
-		sessionStatus, err := ss.GetStatus()
-		if err != nil {
-			return err
-		}
-		status.Status = sessionStatus.Status
-		status.Message = sessionStatus.Message
-
 		// check if checking request from host or client
-		if !cfg.Experimental.StorageClientEnabled && !cfg.Experimental.StorageHostEnabled {
+		if !ctxParams.cfg.Experimental.StorageClientEnabled && !ctxParams.cfg.Experimental.StorageHostEnabled {
 			return fmt.Errorf("storage client/host api not enabled")
 		}
+		rss, err := GetRenterSession(ctxParams, ssId, "")
+		if err != nil {
+			return err
+		}
+		s, err := rss.status()
+		if err != nil {
+			return err
+		}
+		status.Status = s.Status
+		status.Message = s.Message
 
 		// get shards info from session
 		shards := make(map[string]*ShardStatus)
-		metadata, err := ss.GetMetadata()
-		if err != nil {
-			return err
-		}
-		status.FileHash = metadata.FileHash
-		for _, h := range metadata.ShardHashes {
-			shard, err := ds.GetShard(ss.PeerId, ss.Role, ss.Id, h, &ds.ShardInitParams{
-				Context:   ss.Context,
-				Datastore: ss.Datastore,
-			})
+		for _, h := range s.ShardHashes {
+			sh, err := GetRenterShard(ctxParams, ssId, h)
 			if err != nil {
 				return err
 			}
-			st, err := shard.Status()
+			sht, err := sh.status()
 			if err != nil {
 				return err
 			}
-			contracts, err := shard.SignedCongtracts()
+			contracts, err := sh.contracts()
 			if err != nil {
 				return err
 			}
@@ -91,13 +59,18 @@ This command print upload and payment status by the time queried.`,
 				ContractID: "",
 				Price:      0,
 				Host:       "",
-				Status:     st.Status,
-				Message:    st.Message,
+				Status:     sht.Status,
+				Message:    sht.Message,
 			}
-			if contracts.GuardContract != nil {
-				c.ContractID = contracts.GuardContract.ContractId
-				c.Price = contracts.GuardContract.Price
-				c.Host = contracts.GuardContract.HostPid
+			if contracts.SignedGuardContract != nil {
+				var guardContract *guardPb.ContractMeta
+				err := proto.Unmarshal(contracts.SignedGuardContract, guardContract)
+				if err != nil {
+					return err
+				}
+				c.ContractID = guardContract.ContractId
+				c.Price = guardContract.Price
+				c.Host = guardContract.HostPid
 			}
 			shards[h] = c
 		}

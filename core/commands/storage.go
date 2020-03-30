@@ -116,7 +116,7 @@ Use status command to check for completion:
 		"recvcontract":      upload.StorageUploadRecvContractCmd,
 		"status":            upload.StorageUploadStatusCmd,
 		"repair":            storageUploadRepairCmd,
-		"offline":           storageUploadOfflineCmd,
+		"offline":           upload.StorageUploadOfflineCmd,
 		"getcontractbatch":  storageUploadGetContractBatchCmd,
 		"signcontractbatch": storageUploadSignContractBatchCmd,
 		"getunsigned":       storageUploadGetUnsignedCmd,
