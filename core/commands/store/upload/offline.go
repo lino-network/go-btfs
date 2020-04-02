@@ -10,6 +10,8 @@ import (
 	"github.com/TRON-US/go-btfs/core/commands/storage"
 	"github.com/TRON-US/go-btfs/core/commands/store/upload/helper"
 	"github.com/TRON-US/go-btfs/core/corehttp/remote"
+	"github.com/TRON-US/go-btfs/core/escrow"
+	"github.com/TRON-US/go-btfs/core/guard"
 	iface "github.com/TRON-US/interface-go-btfs-core"
 	"github.com/alecthomas/units"
 	"github.com/cenkalti/backoff/v3"
@@ -17,6 +19,7 @@ import (
 	cidlib "github.com/ipfs/go-cid"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prometheus/common/log"
+	escrowpb "github.com/tron-us/go-btfs-common/protos/escrow"
 	"time"
 )
 
@@ -82,9 +85,10 @@ Upload a file with offline signing. I.e., SDK application acts as renter.`,
 					}
 					host, err := hp.NextValidHost(price)
 					if err != nil {
+						fmt.Println("next valid host", err)
 						//TODO: status -> Error
 						rss.cancel()
-						return err
+						return nil
 					}
 					tp := totalPay(shardSize, price, storageLength)
 					escrowCotractBytes, err := renterSignEscrowContract(ctxParams, host, tp, offlineSigning)
@@ -147,7 +151,7 @@ Upload a file with offline signing. I.e., SDK application acts as renter.`,
 					//TODO log.info
 					fmt.Println("session", rss.ssId, "completeNum", completeNum, "errorNum", errorNum)
 					if completeNum == numShards {
-						submit(rss, fileSize)
+						submit(rss, shardHashes, fileSize, offlineSigning)
 						return
 					} else if errorNum > 0 {
 						//TODO
@@ -255,7 +259,45 @@ func totalPay(shardSize int64, price int64, storageLength int) int64 {
 	return totalPay
 }
 
-func submit(rss *RenterSession, fileSize int64) {
+func submit(rss *RenterSession, shardHashes []string, fileSize int64, offlineSigning bool) {
 	rss.submit()
+	bs, t, err := prepareContracts(rss, shardHashes)
+	if err != nil {
+		// TODO: handle error
+		return
+	}
+	fmt.Println(len(bs), t)
+	err = checkBalance(rss, offlineSigning, t)
+	if err != nil {
+		fmt.Println("get balance error:", err)
+		// TODO: handle error
+		return
+	}
 	return
+}
+
+func prepareContracts(rss *RenterSession, shardHashes []string) ([]*escrowpb.SignedEscrowContract, int64, error) {
+	var signedContracts []*escrowpb.SignedEscrowContract
+	var totalPrice int64
+	for _, hash := range shardHashes {
+		shard, err := GetRenterShard(rss.ctxParams, rss.ssId, hash)
+		if err != nil {
+			return nil, 0, err
+		}
+		c, err := shard.contracts()
+		if err != nil {
+			return nil, 0, err
+		}
+		sc, err := escrow.UnmarshalEscrowContract(c.SignedEscrowContract)
+		if err != nil {
+			return nil, 0, err
+		}
+		signedContracts = append(signedContracts, sc)
+		guardContract, err := guard.UnmarshalGuardContract(c.SignedGuardContract)
+		if err != nil {
+			return nil, 0, err
+		}
+		totalPrice += guardContract.Amount
+	}
+	return signedContracts, totalPrice, nil
 }

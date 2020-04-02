@@ -429,8 +429,11 @@ func doWaitUpload(f *ds.Session, payerPriKey ic.PrivKey) {
 				if err != nil {
 					return err
 				}
-				if meta.State == guardpb.FileStoreStatus_RUNNING {
-					return nil
+				num := 0
+				for _, c := range meta.Contracts {
+					if c.State == guardpb.Contract_UPLOADED {
+						num++
+					}
 				}
 				return errors.New("uploading")
 			})
