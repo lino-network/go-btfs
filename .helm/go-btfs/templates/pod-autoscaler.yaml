@@ -1,0 +1,26 @@
+apiVersion: autoscaling/v2beta1
+kind: HorizontalPodAutoscaler
+metadata:
+  labels:
+    app: {{ include "go-btfs.name" . }}
+    chart: {{ include "go-btfs.chart" . }}
+    component: "{{ .Values.name }}"
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+  name: {{ include "go-btfs.fullname" . }}
+spec:
+  minReplicas: {{ .Values.autoscaler.minReplicas }}
+  maxReplicas: {{ .Values.autoscaler.maxReplicas }}
+  metrics:
+  - resource:
+      name: {{ .Values.autoscaler.resourceName }}
+      targetAverageUtilization: {{ .Values.autoscaler.targetAverageUtilization }}
+    type: Resource
+  - resource:
+      name: memory
+      targetAverageUtilization: {{ .Values.autoscaler.targetAverageMemoryUtilization }}
+    type: Resource
+  scaleTargetRef:
+    apiVersion: extensions/v1beta1
+    kind: Deployment
+    name: {{ include "go-btfs.fullname" . }}
