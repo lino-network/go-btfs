@@ -64,8 +64,7 @@ helm:
     # add CHART_VERSION env variable to variables, which should already contain DOCKER_TAG
     - echo "export CHART_VERSION=$CHART_VERSION" >> variables
   dependencies:
-    - docker:stg
-    - docker:prd
+    - docker
   artifacts:
     paths:
       - variables
