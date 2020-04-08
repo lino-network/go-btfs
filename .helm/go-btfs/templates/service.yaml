@@ -18,6 +18,10 @@ spec:
       targetPort: web
       protocol: TCP
       name: web
+    - port: 5001
+      targetPort: daemon
+      protocol: TCP
+      name: daemon
     - port: 4001
       targetPort: tcp
       protocol: TCP
