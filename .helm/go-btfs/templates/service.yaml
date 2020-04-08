@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "go-btfs.fullname" . }}
+  labels:
+    app: {{ include "go-btfs.name" . }}
+    chart: {{ include "go-btfs.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+  annotations:
+  {{- range $key, $value := .Values.serviceAnnotations }}
+    {{ $key }}: {{ $value | quote }}
+  {{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: 8080
+      targetPort: web
+      protocol: TCP
+      name: web
+    - port: 4001
+      targetPort: tcp
+      protocol: TCP
+      name: tcp
+
+  selector:
+    app: {{ include "go-btfs.name" . }}
+    component: "{{ .Values.name }}"
+    release: {{ .Release.Name }}

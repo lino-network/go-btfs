@@ -27,3 +27,4 @@ vendor
 go-ipfs-source.tar.gz
 .idea/
 
+*.tgz
