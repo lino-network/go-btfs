@@ -25,7 +25,7 @@ stages:
   - helm
   - release
 
-docker:stg:
+docker:
   stage: docker
   only:
     - dlive_release
@@ -41,24 +41,6 @@ docker:stg:
     # add DOCKER_TAG env variable to variables
     - touch variables
     - echo "export DOCKER_TAG=${COMMIT_SHA}" >> variables
-  artifacts:
-    paths:
-      - variables
-
-docker:prd:
-  stage: docker
-  only:
-    - dlive_release
-  except:
-    - tags
-  image: linonetwork/gitlab-stage-docker:v0.1.4
-  script:
-    - eval $(aws ecr get-login --no-include-email --region eu-west-1)
-    - DOCKER_BUILD_ARGS=""
-    - docker.sh ${REPOSITORY} ${ECR_NAME} ${TAG} ${DOCKER_BUILD_ARGS}
-    # add DOCKER_TAG env variable to variables
-    - touch variables
-    - echo "export DOCKER_TAG=${TAG}" >> variables
   artifacts:
     paths:
       - variables
@@ -109,23 +91,23 @@ release:stg:
   dependencies:
     - helm
 
-release:prd:
-  stage: release
-  only:
-    - dlive_release
-  except:
-    - tags
-  tags:
-    - kubernetes
-  image: linonetwork/gitlab-stage-release-prd:v0.1.20
-  environment:
-    name: production
-    url: https://github.com/lino-network/lino-app-production/pulls
-  script:
-    # read CHART_VERSION/DOCKER_TAG env variable from helm build
-    - source variables 
-
-    # promote production env, replace LINOAPP_CHART_NAME to JOBS_CHART_NAME if deploy cronjob
-    - release.sh $REPO_NAME $CHART_NAME $ECR_NAME $CHART_VERSION $DOCKER_TAG $REPOSITORY $LINOAPP_CHART_NAME
-  dependencies:
-    - helm
+#release:prd:
+#  stage: release
+#  only:
+#    - dlive_release
+#  except:
+#    - tags
+#  tags:
+#    - kubernetes
+#  image: linonetwork/gitlab-stage-release-prd:v0.1.20
+#  environment:
+#    name: production
+#    url: https://github.com/lino-network/lino-app-production/pulls
+#  script:
+#    # read CHART_VERSION/DOCKER_TAG env variable from helm build
+#    - source variables
+#
+#    # promote production env, replace LINOAPP_CHART_NAME to JOBS_CHART_NAME if deploy cronjob
+#    - release.sh $REPO_NAME $CHART_NAME $ECR_NAME $CHART_VERSION $DOCKER_TAG $REPOSITORY $LINOAPP_CHART_NAME
+#  dependencies:
+#    - helm
