@@ -77,6 +77,15 @@ autoscaler:
   resourceName: cpu
   targetAverageUtilization: 65
   targetAverageMemoryUtilization: 80
-volumeMounts: {}
+
+persistent:
+  storageClassName: sc1
+  # set at least 500Gi in production
+  storage: 10Gi
+volumeMounts:
+  - name: data-volume
+    mountPath: /data
+    readOnly: false
 volumes: {}
+
 containerArgs: []

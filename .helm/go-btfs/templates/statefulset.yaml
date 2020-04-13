@@ -1,7 +1,7 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
-  name: {{ include "go-btfs.fullname" . }}
+  name: {{ include "go-btfs.fullname" }}
   labels:
     app: {{ include "go-btfs.name" . }}
     chart: {{ include "go-btfs.chart" . }}
@@ -9,45 +9,38 @@ metadata:
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 spec:
+  podManagementPolicy: Parallel
   replicas: {{ .Values.replicaCount }}
+  updateStrategy:
+    type: RollingUpdate
   selector:
     matchLabels:
       app: {{ include "go-btfs.name" . }}
       component: "{{ .Values.name }}"
       release: {{ .Release.Name }}
-  strategy:
-    rollingUpdate: 
-      maxSurge: {{ .Values.maxSurge }}
-      maxUnavailable: {{ .Values.maxUnavailable }}
-    type: {{ .Values.strategyType }}
   template:
     metadata:
       labels:
-        app: {{ include "go-btfs.name" . }}
-        component: "{{ .Values.name }}"
+        app : {{ include "go-btfs.name" }}
+        component: {{ .Values.name }}
         release: {{ .Release.Name }}
       annotations:
         cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
-        checksum/config: {{ include (print .Template.BasePath "/configmap.yaml") . | sha256sum }}
-        checksum/secret: {{ include (print .Template.BasePath "/secret.yaml") . | sha256sum }}
-      {{- range $key, $value := .Values.deploymentAnnotations }}
-        {{ $key }}: {{ $value | quote }}
-      {{- end }}
     spec:
-    {{- with .Values.nodeSelector }}
+      {{- with .Values.nodeSelector }}
       nodeSelector:
 {{ toYaml . | indent 8 }}
-    {{- end }}
-    {{- with .Values.affinity }}
+      {{- end }}
+      {{- with .Values.affinity }}
       affinity:
 {{ toYaml . | indent 8 }}
-    {{- end }}
-    {{- with .Values.tolerations }}
+      {{- end }}
+      {{- with .Values.tolerations }}
       tolerations:
 {{ toYaml . | indent 8 }}
-    {{- end }}
+      {{- end }}
       containers:
-        - name: {{ include "go-btfs.name" . }}
+        - name: {{ include "go-btfs.name" }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           resources:
 {{ toYaml .Values.resources | indent 12 }}
@@ -74,7 +67,7 @@ spec:
             - name: {{ $value.name }}
               containerPort: {{ $value.containerPort }}
               protocol: {{ $value.protocol }}
-            {{- end }}
+          {{- end }}
           {{- end }}
           {{- if .Values.containerArgs }}
           args: {{ .Values.containerArgs }}
@@ -90,19 +83,28 @@ spec:
                 secretKeyRef:
                   name: {{ include "go-btfs.fullname" $ }}
                   key: {{ $key }}
-            {{- end }}
+          {{- end }}
           envFrom:
-          - configMapRef:
-              name: {{ include "go-btfs.fullname" . }}
-              {{- if .Values.volumeMounts }}
+            - configMapRef:
+                name: {{ include "go-btfs.fullname" . }}
+          {{- if .Values.volumeMounts }}
           volumeMounts:
-          {{- range .Values.volumeMounts }}
-          - name: {{ .name }}
-            mountPath: {{ .mountPath | quote }}
-            readOnly: {{ .readOnly }}
+            {{- range .Values.volumeMounts }}
+            - name: {{ .name }}
+              mountPath: {{ .mountPath | quote }}
+              readOnly: {{ .readOnly }}
+            {{- end }}
           {{- end }}
-          {{- end }}
-    {{- with .Values.volumes }}
+      {{- with .Values.volumes }}
       volumes:
 {{ toYaml . | indent 6 }}
-    {{- end }}
+      {{- end }}
+  volumeClaimTemplates:
+  - metadata:
+      name: data-volume
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: {{ .Values.persistent.storageClassName }}
+      resources:
+        requests:
+          storage: {{ .Values.persistent.storage }}
