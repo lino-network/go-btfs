@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: {{ include "go-btfs.fullname" }}
+  name: {{ include "go-btfs.fullname" . }}
   labels:
     app: {{ include "go-btfs.name" . }}
     chart: {{ include "go-btfs.chart" . }}
@@ -21,7 +21,7 @@ spec:
   template:
     metadata:
       labels:
-        app : {{ include "go-btfs.name" }}
+        app : {{ include "go-btfs.name" . }}
         component: {{ .Values.name }}
         release: {{ .Release.Name }}
       annotations:
@@ -40,7 +40,7 @@ spec:
 {{ toYaml . | indent 8 }}
       {{- end }}
       containers:
-        - name: {{ include "go-btfs.name" }}
+        - name: {{ include "go-btfs.name" . }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           resources:
 {{ toYaml .Values.resources | indent 12 }}

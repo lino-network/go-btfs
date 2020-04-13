@@ -2,9 +2,10 @@ apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: {{ .Values.persistent.storageClassName }}
+{{- with .Values.persistent.storageClassParams }}
 parameters:
-  fsType: ext4
-  type: sc1
+{{ toYaml . | indent 2 }}
+{{- end}}
 provisioner: kubernetes.io/aws-ebs
 allowVolumeExpansion: true
 reclaimPolicy: Delete

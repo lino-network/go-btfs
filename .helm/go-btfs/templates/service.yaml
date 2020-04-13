@@ -15,17 +15,21 @@ spec:
   type: {{ .Values.service.type }}
   ports:
     - port: 8080
-      targetPort: web
+      targetPort: 8080
       protocol: TCP
-      name: web
+      name: gateway
     - port: 5001
-      targetPort: daemon
+      targetPort: 5001
       protocol: TCP
-      name: daemon
+      name: api
     - port: 4001
-      targetPort: tcp
+      targetPort: 4001
       protocol: TCP
-      name: tcp
+      name: swarm
+    - port: 5101
+      targetPort: 5101
+      protocol: TCP
+      name: remote-api
 
   selector:
     app: {{ include "go-btfs.name" . }}

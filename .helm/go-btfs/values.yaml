@@ -9,11 +9,11 @@ virtualservice:
   perTryTimeout: 10s
 resources:
   limits:
-    cpu: 2000m
-    memory: 2000Mi
+    cpu: 1000m
+    memory: 1Gi
   requests:
     cpu: 1000m
-    memory: 1000Mi
+    memory: 1Gi
 extraEnv: {}
 extraData: {}
 serviceAnnotations: {}
@@ -22,7 +22,7 @@ readiness:
   # Readiness prob is highly recommended
   enabled: true
   path: /
-  port: 4001
+  port: 5001
   delay: 0
   period: 10
   timeoutSeconds: 5
@@ -30,7 +30,7 @@ liveness:
   # Liveliness prob is highly recommended
   enabled: true
   path: /
-  port: 4001
+  port: 5001
   delay: 300
   period: 10
   timeoutSeconds: 5
@@ -50,17 +50,17 @@ affinity:
         topologyKey: kubernetes.io/hostname
 ports:
   # Any ports that you are exposed for other service, or health check purpose
-- name: tcp
+- name: swarm
   containerPort: 4001
   protocol: TCP
-- name: daemon
+- name: api
   containerPort: 5001
   protocol: TCP
-- name: web
+- name: gateway
   containerPort: 8080
   protocol: TCP
-- name: socket
-  containerPort: 8081
+- name: remote-api
+  containerPort: 5101
   protocol: TCP
 
 replicaCount: 1
@@ -79,13 +79,23 @@ autoscaler:
   targetAverageMemoryUtilization: 80
 
 persistent:
-  storageClassName: sc1
-  # set at least 500Gi in production
+  # set at least `500Gi` in PRD, `sc1` doesn't allow less than 500Gi
   storage: 10Gi
+  # set to `sc1` in PRD
+#  storageClassName: sc1
+#  storageClassParams:
+#    fsType: ext4
+#    type: sc1
+  storageClassName: gp2
+  storageClassParams:
+    type: gp2
 volumeMounts:
   - name: data-volume
     mountPath: /data
     readOnly: false
-volumes: {}
+volumes:
+  - name: data-volume
+    persistentVolumeClaim:
+      claimName: go-btfs
 
 containerArgs: []
