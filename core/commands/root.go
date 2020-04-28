@@ -7,6 +7,9 @@ import (
 	dag "github.com/TRON-US/go-btfs/core/commands/dag"
 	"github.com/TRON-US/go-btfs/core/commands/name"
 	ocmd "github.com/TRON-US/go-btfs/core/commands/object"
+	"github.com/TRON-US/go-btfs/core/commands/storage"
+	"github.com/TRON-US/go-btfs/core/commands/storage/challenge"
+	"github.com/TRON-US/go-btfs/core/commands/storage/upload/upload"
 	"github.com/TRON-US/go-btfs/core/commands/unixfs"
 
 	cmds "github.com/TRON-US/go-btfs-cmds"
@@ -150,9 +153,10 @@ var rootSubcommands = map[string]*cmds.Command{
 	"urlstore":  urlStoreCmd,
 	"version":   VersionCmd,
 	"shutdown":  daemonShutdownCmd,
+	"restart":   restartCmd,
 	"cid":       CidCmd,
 	"rm":        RmCmd,
-	"storage":   StorageCmd,
+	"storage":   storage.StorageCmd,
 	"metadata":  MetadataCmd,
 	"guard":     GuardCmd,
 	"wallet":    WalletCmd,
@@ -212,13 +216,13 @@ var rootRemoteSubcommands = map[string]*cmds.Command{
 		Subcommands: map[string]*cmds.Command{
 			"challenge": &cmds.Command{
 				Subcommands: map[string]*cmds.Command{
-					"response": storageChallengeResponseCmd,
+					"response": challenge.StorageChallengeResponseCmd,
 				},
 			},
 			"upload": &cmds.Command{
 				Subcommands: map[string]*cmds.Command{
-					"init":         storageUploadInitCmd,
-					"recvcontract": storageUploadRecvContractCmd,
+					"init":         upload.StorageUploadInitCmd,
+					"recvcontract": upload.StorageUploadRecvContractCmd,
 				},
 			},
 		},
