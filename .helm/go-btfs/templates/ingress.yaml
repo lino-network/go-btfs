@@ -1,0 +1,30 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: {{ .Values.ingress.name }}
+  annotations:
+    kubernetes.io/ingress.class: {{ .Values.ingress.ingressClass }}
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
+    {{- if .Values.upstreamHash.enabled }}
+    nginx.ingress.kubernetes.io/upstream-hash-by: "$request_uri"
+    {{- end }}
+spec:
+  tls:
+    - hosts:
+        {{- range $key, $value := .Values.ingress.domains }}
+        - {{ $value.name }}
+      {{- end }}
+      secretName: {{ $.Values.ingress.secretName }}
+  rules:
+    {{- $dot := . }}
+    {{- range $key, $value := .Values.ingress.domains }}
+    - host: {{ $value.name }}
+      http:
+        paths:
+          - path: /
+            backend:
+              serviceName: {{ template "go-btfs.fullname" $dot }}
+              servicePort: 80
+  {{- end }}
