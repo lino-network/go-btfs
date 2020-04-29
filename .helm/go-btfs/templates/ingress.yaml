@@ -3,20 +3,23 @@ kind: Ingress
 metadata:
   name: {{ .Values.ingress.name }}
   annotations:
-    kubernetes.io/ingress.class: {{ .Values.ingress.ingressClass }}
-    nginx.ingress.kubernetes.io/ssl-redirect: "false"
-    nginx.ingress.kubernetes.io/proxy-buffering: "off"
-    nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
-    {{- if .Values.upstreamHash.enabled }}
-    nginx.ingress.kubernetes.io/upstream-hash-by: "$request_uri"
-    {{- end }}
+    kubernetes.io/ingress.class: "alb"
+    alb.ingress.kubernetes.io/scheme: "internet-facing"
+    alb.ingress.kubernetes.io/target-type: "instance"
+    alb.ingress.kubernetes.io/certificate-arn: "arn:aws:acm:eu-west-1:726332586568:certificate/54a8c1c9-7153-4f12-8464-78f30cff5601"
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: '15'
+    alb.ingress.kubernetes.io/load-balancer-attributes: "access_logs.s3.enabled=true,access_logs.s3.bucket=stg-app-s3-waf,access_logs.s3.prefix=waf,deletion_protection.enabled=true"
+    alb.ingress.kubernetes.io/web-acl-id: "2e32b4b6-c31a-4f2f-a610-b31f32b0e8a9"
+    alb.ingress.kubernetes.io/inbound-cidrs: "0.0.0.0/0"
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/healthcheck-port: api
 spec:
-  tls:
-    - hosts:
-        {{- range $key, $value := .Values.ingress.domains }}
-        - {{ $value.name }}
-      {{- end }}
-      secretName: {{ $.Values.ingress.secretName }}
+{{/*  tls:*/}}
+{{/*    - hosts:*/}}
+{{/*        {{- range $key, $value := .Values.ingress.domains }}*/}}
+{{/*        - {{ $value.name }}*/}}
+{{/*      {{- end }}*/}}
+{{/*      secretName: {{ $.Values.ingress.secretName }}*/}}
   rules:
     {{- $dot := . }}
     {{- range $key, $value := .Values.ingress.domains }}
@@ -27,4 +30,11 @@ spec:
             backend:
               serviceName: {{ template "go-btfs.fullname" $dot }}
               servicePort: api
-  {{- end }}
+    {{- end }}
+{{/*    - host: btfs.{{ required "A valid .Values.albExternal.domain entry requried!" .Values.albExternal.domain }}*/}}
+{{/*      http:*/}}
+{{/*        paths:*/}}
+{{/*        - path: /**/}}
+{{/*          backend:*/}}
+{{/*            serviceName: {{ include "linoapp.btfs.fullname" . }}*/}}
+{{/*            servicePort: api*/}}
