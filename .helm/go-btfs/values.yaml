@@ -68,6 +68,8 @@ ingress:
   ingressClass: nginx-external
   domains:
     - name: playback-btfs.stg.dlive.tv
+      path: /*
+
   secretName: go-btfs-tls
 
 upstreamHash:
