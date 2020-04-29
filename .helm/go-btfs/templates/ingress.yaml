@@ -26,5 +26,5 @@ spec:
           - path: /
             backend:
               serviceName: {{ template "go-btfs.fullname" $dot }}
-              servicePort: 80
+              servicePort: api
   {{- end }}
