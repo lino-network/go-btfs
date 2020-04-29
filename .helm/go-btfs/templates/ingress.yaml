@@ -26,7 +26,7 @@ spec:
     - host: {{ $value.name }}
       http:
         paths:
-          - path: /
+          - path: /*
             backend:
               serviceName: {{ template "go-btfs.fullname" $dot }}
               servicePort: api
