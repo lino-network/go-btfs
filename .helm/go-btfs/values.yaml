@@ -65,7 +65,16 @@ ports:
 
 ingress:
   name: go-btfs-ingress-external
-  ingressClass: nginx-external
+#  ingressClass: nginx-external
+  alb:
+    scheme: "internet-facing"
+    targetType: "instance"
+    certificateArn: "arn:aws:acm:eu-west-1:726332586568:certificate/54a8c1c9-7153-4f12-8464-78f30cff5601"
+    attributes: "access_logs.s3.enabled=true,access_logs.s3.bucket=stg-app-s3-waf,access_logs.s3.prefix=waf,deletion_protection.enabled=true"
+    webAclId: "2e32b4b6-c31a-4f2f-a610-b31f32b0e8a9"
+    inboundCidrs: "0.0.0.0/0"
+    healthcheckPath: /
+    healthcheckPort: api
   domains:
     - name: playback-btfs.stg.dlive.tv
       path: /*
