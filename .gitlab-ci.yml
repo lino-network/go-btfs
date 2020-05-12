@@ -68,11 +68,7 @@ docker:stg:
 
 helm:
   only:
-    refs:
-      - tags
-      - dlive_release
-    changes:
-      - .helm/**/*
+    - tags
   tags:
     - kubernetes
   stage: helm
