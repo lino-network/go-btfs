@@ -54,7 +54,7 @@ docker:stg:
     - tags
   tags:
     - kubernetes
-  image: linonetwork/gitlab-stage-docker:v0.1.11
+  image: linonetwork/gitlab-stage-docker:v0.1.4
   script:
     - eval $(aws ecr get-login --no-include-email --region eu-west-1)
     - DOCKER_BUILD_ARGS=""
