@@ -69,6 +69,7 @@ docker:stg:
 helm:
   only:
     - tags
+    - dlive_release
   tags:
     - kubernetes
   stage: helm
