@@ -4,9 +4,8 @@ variables:
   CHART_NAME: go-btfs
   COMMIT_SHA: ${CI_COMMIT_SHA}
   TAG: ${CI_COMMIT_TAG}
-  LINOAPP_CHART_NAME: linoapp
+  LIVESTREAM_CHART_NAME: livestream
   LINOAPP_DOOR_CHART_NAME: linoapp-door
-  JOBS_CHART_NAME: jobs
 
 before_script:
   - mkdir -p $GOPATH/src/$(dirname $REPO_NAME)
@@ -135,7 +134,7 @@ release:prd:
   script:
     # read CHART_VERSION/DOCKER_TAG env variable from helm build
     - source variables
-    # promote production env, replace LINOAPP_CHART_NAME to JOBS_CHART_NAME if deploy cronjob
+    # promote production env, replace LIVESTREAM_CHART_NAME to JOBS_CHART_NAME if deploy cronjob
     - release.sh $REPO_NAME $CHART_NAME $ECR_NAME $CHART_VERSION $DOCKER_TAG $REPOSITORY $LIVESTREAM_CHART_NAME
   dependencies:
     - helm
