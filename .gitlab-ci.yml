@@ -26,7 +26,28 @@ stages:
   - helm
   - release
 
-docker:
+docker:prd:
+  retry:
+    max: 2
+    when: runner_system_failure
+  stage: docker
+  only:
+    - tags
+  tags:
+    - kubernetes
+  image: linonetwork/gitlab-stage-docker:v0.1.11
+  script:
+    - eval $(aws ecr get-login --no-include-email --region eu-west-1)
+    # if extra arg needed for docker build step, pass in 4th arg
+    - docker.sh ${REPOSITORY} ${ECR_NAME} ${TAG} "" "prd" "Dockerfile"
+    # add DOCKER_TAG env variable to variables
+    - touch variables
+    - echo "export DOCKER_TAG=${TAG}" >> variables
+  artifacts:
+    paths:
+      - variables
+
+docker:stg:
   stage: docker
   only:
     - dlive_release
@@ -34,7 +55,7 @@ docker:
     - tags
   tags:
     - kubernetes
-  image: linonetwork/gitlab-stage-docker:v0.1.4
+  image: linonetwork/gitlab-stage-docker:v0.1.11
   script:
     - eval $(aws ecr get-login --no-include-email --region eu-west-1)
     - DOCKER_BUILD_ARGS=""
@@ -48,9 +69,11 @@ docker:
 
 helm:
   only:
-    - dlive_release
-  except:
-    - tags
+    refs:
+      - tags
+      - dlive_release
+    changes:
+      - .helm/**/*
   tags:
     - kubernetes
   stage: helm
@@ -65,7 +88,8 @@ helm:
     # add CHART_VERSION env variable to variables, which should already contain DOCKER_TAG
     - echo "export CHART_VERSION=$CHART_VERSION" >> variables
   dependencies:
-    - docker
+    - docker:stg
+    - docker:prd
   artifacts:
     paths:
       - variables
@@ -95,23 +119,23 @@ release:stg:
   dependencies:
     - helm
 
-#release:prd:
-#  stage: release
-#  only:
-#    - dlive_release
-#  except:
-#    - tags
-#  tags:
-#    - kubernetes
-#  image: linonetwork/gitlab-stage-release-prd:v0.1.20
-#  environment:
-#    name: production
-#    url: https://github.com/lino-network/lino-app-production/pulls
-#  script:
-#    # read CHART_VERSION/DOCKER_TAG env variable from helm build
-#    - source variables
-#
-#    # promote production env, replace LINOAPP_CHART_NAME to JOBS_CHART_NAME if deploy cronjob
-#    - release.sh $REPO_NAME $CHART_NAME $ECR_NAME $CHART_VERSION $DOCKER_TAG $REPOSITORY $LINOAPP_CHART_NAME
-#  dependencies:
-#    - helm
+release:prd:
+  retry:
+    max: 2
+    when: runner_system_failure
+  stage: release
+  only:
+    - tags
+  tags:
+    - kubernetes
+  image: linonetwork/gitlab-stage-release-prd-stream:v0.0.1
+  environment:
+    name: production
+    url: https://github.com/lino-network/kube-stream-core/pulls
+  script:
+    # read CHART_VERSION/DOCKER_TAG env variable from helm build
+    - source variables
+    # promote production env, replace LINOAPP_CHART_NAME to JOBS_CHART_NAME if deploy cronjob
+    - release.sh $REPO_NAME $CHART_NAME $ECR_NAME $CHART_VERSION $DOCKER_TAG $REPOSITORY $LIVESTREAM_CHART_NAME
+  dependencies:
+    - helm
