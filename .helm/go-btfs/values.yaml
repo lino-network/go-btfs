@@ -75,7 +75,7 @@ ingress:
     healthcheckPath: /
     healthcheckPort: api
   domains:
-    - name: playback-btfs.stg.dlive.tv
+    - name: "playback-btfs.stg.dlive.tv"
       path: /*
 
   secretName: go-btfs-tls
