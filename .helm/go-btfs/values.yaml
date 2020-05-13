@@ -65,7 +65,6 @@ ports:
 
 ingress:
   name: go-btfs-ingress-external
-#  ingressClass: nginx-external
   alb:
     scheme: "internet-facing"
     targetType: "instance"
