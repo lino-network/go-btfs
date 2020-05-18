@@ -16,8 +16,8 @@ resources:
     memory: 1Gi
 extraEnv: {}
 extraData: {}
+goBtfsSecrets: {}
 serviceAnnotations: {}
-deploymentAnnotations: {}
 readiness:
   # Readiness prob is highly recommended
   enabled: true
@@ -83,10 +83,6 @@ ingress:
 upstreamHash:
   enabled: false
 
-replicaCount: 1
-maxSurge: 1
-maxUnavailable: 0
-strategyType: RollingUpdate
 image:
   repository: "726332586568.dkr.ecr.eu-west-1.amazonaws.com/go-btfs"
   tag: "f71e12c7c1a9b6177b98520d202152e901ab4f21"
@@ -97,25 +93,25 @@ autoscaler:
   resourceName: cpu
   targetAverageUtilization: 65
   targetAverageMemoryUtilization: 80
+replicaCount: 1
 
+volumeMounts:
+- name: data-volume
+  mountPath: /data
+  readOnly: false
+volumes:
+# pvc will be named as "volumeClaimTemplate name + pod-name + ordinal number", for example, "data-volume-livestream-go-btfs-0"
+- name: data-volume
 persistent:
   # set at least `500Gi` in PRD, `sc1` doesn't allow less than 500Gi
   storage: 10Gi
   # set to `sc1` in PRD
-#  storageClassName: sc1
-#  storageClassParams:
-#    fsType: ext4
-#    type: sc1
-  storageClassName: gp2
+  #  storageClassName: sc1
+  #  storageClassParams:
+  #    fsType: ext4
+  #    type: sc1
+  storageClassName: go-btfs-gp2
   storageClassParams:
     type: gp2
-volumeMounts:
-  - name: data-volume
-    mountPath: /data
-    readOnly: false
-volumes:
-  - name: data-volume
-    persistentVolumeClaim:
-      claimName: go-btfs
 
 containerArgs: []

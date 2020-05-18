@@ -83,7 +83,7 @@ spec:
                 secretKeyRef:
                   name: {{ include "go-btfs.fullname" $ }}
                   key: {{ $key }}
-          {{- end }}
+            {{- end }}
           envFrom:
             - configMapRef:
                 name: {{ include "go-btfs.fullname" . }}
