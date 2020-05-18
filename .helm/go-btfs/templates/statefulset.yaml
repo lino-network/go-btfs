@@ -73,9 +73,9 @@ spec:
           args: {{ .Values.containerArgs }}
           {{- end }}
           env:
-            {{- range $key, $value := .Values.extraEnv }}
+            {{- range $key, $value := $.Values.extraEnv }}
             - name: {{ $key }}
-              value: "{{ $value }}"
+              value: {{ $value | quote }}
             {{- end }}
             {{- range $key, $_ := $.Values.goBtfsSecrets }}
             - name: {{ $key | upper }}
