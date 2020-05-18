@@ -22,5 +22,5 @@ spec:
     type: Resource
   scaleTargetRef:
     apiVersion: extensions/v1beta1
-    kind: Deployment
+    kind: StatefulSet
     name: {{ include "go-btfs.fullname" . }}
