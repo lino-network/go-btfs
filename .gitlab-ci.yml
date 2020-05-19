@@ -77,10 +77,8 @@ helm:
   script:
     # read DOCKER_TAG env variable from helm release stage
     - source variables
-    
     - CHART_VERSION=$(version.sh $CHART_NAME $CI_COMMIT_SHA $CHART_REPO $CI_COMMIT_TAG)
     - chart.sh $CHART_NAME $CI_COMMIT_SHA $CHART_REPO $CI_COMMIT_TAG
-    
     # add CHART_VERSION env variable to variables, which should already contain DOCKER_TAG
     - echo "export CHART_VERSION=$CHART_VERSION" >> variables
   dependencies:
@@ -106,7 +104,6 @@ release:stg:
     # read CHART_VERSION/DOCKER_TAG env variable from helm build
     - source variables
     - pull.sh
-    
     # update staging env, replace LINOAPP_CHART_NAME to JOBS_CHART_NAME if deploy cronjob
 #    - release.sh $REPO_NAME $CHART_NAME $ECR_NAME $CHART_VERSION $DOCKER_TAG $REPOSITORY $LINOAPP_CHART_NAME
     - patch_value.sh $CHART_NAME $DOCKER_TAG $LINOAPP_DOOR_CHART_NAME
