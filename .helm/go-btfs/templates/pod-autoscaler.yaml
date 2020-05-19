@@ -1,4 +1,4 @@
-apiVersion: autoscaling/v2beta1
+apiVersion: autoscaling/v2beta2
 kind: HorizontalPodAutoscaler
 metadata:
   labels:
@@ -12,14 +12,18 @@ spec:
   minReplicas: {{ .Values.autoscaler.minReplicas }}
   maxReplicas: {{ .Values.autoscaler.maxReplicas }}
   metrics:
-  - resource:
-      name: {{ .Values.autoscaler.resourceName }}
-      targetAverageUtilization: {{ .Values.autoscaler.targetAverageUtilization }}
-    type: Resource
-  - resource:
-      name: memory
-      targetAverageUtilization: {{ .Values.autoscaler.targetAverageMemoryUtilization }}
-    type: Resource
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.autoscaler.targetAverageUtilization }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.autoscaler.targetAverageMemoryUtilization }}
   scaleTargetRef:
     apiVersion: apps/v1
     kind: StatefulSet
