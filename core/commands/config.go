@@ -83,8 +83,8 @@ Set the value of the 'Datastore.Path' key:
 
 		// This is a temporary fix until we move the private key out of the config file
 		switch strings.ToLower(key) {
-		case "identity", "identity.privkey":
-			return errors.New("cannot show or change private key through API")
+		case "identity", "identity.privkey", "identity.mnemonic", "identity.peerid":
+			return fmt.Errorf("cannot show or change %s through API", key)
 		default:
 		}
 
@@ -112,6 +112,17 @@ Set the value of the 'Datastore.Path' key:
 				output, err = setConfig(r, key, value == "true")
 			} else {
 				output, err = setConfig(r, key, value)
+			}
+			if err != nil {
+				return err
+			}
+			if f, err := getConfig(r, "UI.Wallet.Initialized"); err == nil {
+				if f.Value.(bool) == true {
+					err := r.SetConfigKey("Identity.Mnemonic", "")
+					if err != nil {
+						return err
+					}
+				}
 			}
 		} else {
 			output, err = getConfig(r, key)
@@ -172,9 +183,11 @@ NOTE: For security reasons, this command will omit your private key. If you woul
 			return err
 		}
 
-		err = scrubValue(cfg, []string{config.IdentityTag, config.PrivKeyTag})
-		if err != nil {
-			return err
+		for _, k := range []string{config.PrivKeyTag, config.MnemonicTag} {
+			err = scrubValue(cfg, []string{config.IdentityTag, k})
+			if err != nil {
+				return err
+			}
 		}
 
 		return cmds.EmitOnce(res, &cfg)
@@ -225,11 +238,9 @@ func scrubValue(m map[string]interface{}, key []string) error {
 	}
 
 	todel, _, ok := find(cur, key[len(key)-1])
-	if !ok {
-		return fmt.Errorf("%s, not found", strings.Join(key, "."))
+	if ok {
+		delete(cur, todel)
 	}
-
-	delete(cur, todel)
 	return nil
 }
 

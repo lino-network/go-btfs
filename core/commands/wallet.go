@@ -1,13 +1,16 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 
-	cmds "github.com/TRON-US/go-btfs-cmds"
 	"github.com/TRON-US/go-btfs/core/commands/cmdenv"
 	"github.com/TRON-US/go-btfs/core/wallet"
+
+	cmds "github.com/TRON-US/go-btfs-cmds"
 )
 
 var WalletCmd = &cmds.Command{
@@ -23,6 +26,8 @@ withdraw and query balance of token used in BTFS.`,
 		"deposit":  walletDepositCmd,
 		"withdraw": walletWithdrawCmd,
 		"balance":  walletBalanceCmd,
+		"password": walletPasswordCmd,
+		"keys":     walletKeysCmd,
 	},
 }
 
@@ -35,9 +40,12 @@ var walletInitCmd = &cmds.Command{
 	Arguments: []cmds.Argument{},
 	Options:   []cmds.Option{},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		cfg, err := cmdenv.GetConfig(env)
+		n, err := cmdenv.GetNode(env)
 		if err != nil {
-			fmt.Println("get config failed")
+			return err
+		}
+		cfg, err := n.Repo.Config()
+		if err != nil {
 			return err
 		}
 
@@ -57,6 +65,7 @@ var walletDepositCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline:          "BTFS wallet deposit",
 		ShortDescription: "BTFS wallet deposit from block chain to ledger.",
+		Options:          "unit is µBTT (=0.000001BTT)",
 	},
 
 	Arguments: []cmds.Argument{
@@ -84,7 +93,9 @@ var walletDepositCmd = &cmds.Command{
 
 		err = wallet.WalletDeposit(cfg, amount, runDaemon)
 		if err != nil {
-			log.Error("wallet deposit failed, ERR: ", err)
+			if strings.Contains(err.Error(), "Please deposit at least") {
+				err = errors.New("Please deposit at least 10,000,000µBTT(=10BTT)")
+			}
 			return err
 		}
 		s := fmt.Sprintf("BTFS wallet deposit submitted. Please wait one minute for the transaction to confirm.")
@@ -106,6 +117,7 @@ var walletWithdrawCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline:          "BTFS wallet withdraw",
 		ShortDescription: "BTFS wallet withdraw from ledger to block chain.",
+		Options:          "unit is µBTT (=0.000001BTT)",
 	},
 
 	Arguments: []cmds.Argument{
@@ -125,7 +137,9 @@ var walletWithdrawCmd = &cmds.Command{
 
 		err = wallet.WalletWithdraw(cfg, amount)
 		if err != nil {
-			log.Error("wallet withdraw failed, ERR: ", err)
+			if strings.Contains(err.Error(), "Please withdraw at least") {
+				err = errors.New("Please withdraw at least 1,000,000,000µBTT(=1000BTT)")
+			}
 			return err
 		}
 
@@ -145,31 +159,115 @@ var walletBalanceCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline:          "BTFS wallet balance",
 		ShortDescription: "Query BTFS wallet balance in ledger and block chain.",
+		Options:          "unit is µBTT (=0.000001BTT)",
 	},
 
 	Arguments: []cmds.Argument{},
 	Options:   []cmds.Option{},
 	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
-		cfg, err := cmdenv.GetConfig(env)
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+		cfg, err := n.Repo.Config()
 		if err != nil {
 			return err
 		}
 
-		tronBalance, lederBalance, err := wallet.GetBalance(cfg)
+		tronBalance, ledgerBalance, err := wallet.GetBalance(cfg)
 		if err != nil {
 			log.Error("wallet get balance failed, ERR: ", err)
 			return err
 		}
-		s := fmt.Sprintf("BTFS wallet tron balance '%d', ledger balance '%d'\n", tronBalance, lederBalance)
+		s := fmt.Sprintf("BTFS wallet tron balance '%d', ledger balance '%d'\n", tronBalance, ledgerBalance)
 		log.Info(s)
-
-		return cmds.EmitOnce(res, &MessageOutput{s})
+		return cmds.EmitOnce(res, &BalanceResponse{
+			BtfsWalletBalance: uint64(ledgerBalance),
+			BttWalletBalance:  uint64(tronBalance),
+		})
 	},
-	Encoders: cmds.EncoderMap{
-		cmds.Text: cmds.MakeTypedEncoder(func(req *cmds.Request, w io.Writer, out *MessageOutput) error {
-			fmt.Fprint(w, out.Message)
-			return nil
-		}),
+	Type: BalanceResponse{},
+}
+
+type BalanceResponse struct {
+	BtfsWalletBalance uint64
+	BttWalletBalance  uint64
+}
+
+var walletPasswordCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline:          "BTFS wallet password",
+		ShortDescription: "set password for BTFS wallet",
+	},
+	Arguments: []cmds.Argument{
+		cmds.StringArg("password", true, false, "password of BTFS wallet."),
+	},
+	Options: []cmds.Option{},
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+		cfg, err := n.Repo.Config()
+		if err != nil {
+			return err
+		}
+		if cfg.UI.Wallet.Initialized {
+			return errors.New("Already init, cannot set password again.")
+		}
+		cipherMnemonic, err := wallet.EncryptWithAES(req.Arguments[0], cfg.Identity.Mnemonic)
+		if err != nil {
+			return err
+		}
+		cipherPrivKey, err := wallet.EncryptWithAES(req.Arguments[0], cfg.Identity.PrivKey)
+		if err != nil {
+			return err
+		}
+		cfg.Identity.EncryptedMnemonic = cipherMnemonic
+		cfg.Identity.EncryptedPrivKey = cipherPrivKey
+		err = n.Repo.SetConfig(cfg)
+		if err != nil {
+			return err
+		}
+		return cmds.EmitOnce(res, &MessageOutput{"Password set."})
 	},
 	Type: MessageOutput{},
+}
+
+var walletKeysCmd = &cmds.Command{
+	Helptext: cmds.HelpText{
+		Tagline:          "BTFS wallet keys",
+		ShortDescription: "get keys of BTFS wallet",
+	},
+	Arguments: []cmds.Argument{},
+	Options:   []cmds.Option{},
+	Run: func(req *cmds.Request, res cmds.ResponseEmitter, env cmds.Environment) error {
+		n, err := cmdenv.GetNode(env)
+		if err != nil {
+			return err
+		}
+		cfg, err := n.Repo.Config()
+		if err != nil {
+			return err
+		}
+		var keys *Keys
+		if !cfg.UI.Wallet.Initialized {
+			keys = &Keys{
+				PrivateKey: cfg.Identity.PrivKey,
+				Mnemonic:   cfg.Identity.Mnemonic,
+			}
+		} else {
+			keys = &Keys{
+				PrivateKey: cfg.Identity.EncryptedPrivKey,
+				Mnemonic:   cfg.Identity.EncryptedMnemonic,
+			}
+		}
+		return cmds.EmitOnce(res, keys)
+	},
+	Type: Keys{},
+}
+
+type Keys struct {
+	PrivateKey string
+	Mnemonic   string
 }
