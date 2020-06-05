@@ -14,7 +14,9 @@ resources:
   requests:
     cpu: 1000m
     memory: 1Gi
-extraEnv: {}
+extraEnv:
+  # allow cors
+  API_ORIGIN: "*"
 extraData: {}
 goBtfsSecrets: {}
 serviceAnnotations: {}
