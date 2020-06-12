@@ -129,7 +129,13 @@ release:prd:
   script:
     # read CHART_VERSION/DOCKER_TAG env variable from helm build
     - source variables
-    # promote production env, replace LIVESTREAM_CHART_NAME to JOBS_CHART_NAME if deploy cronjob
-    - release.sh $REPO_NAME $CHART_NAME $ECR_NAME $CHART_VERSION $DOCKER_TAG $REPOSITORY $ENVIRONMENT $LIVESTREAM_CHART_NAME
+
+    - source variables
+    - pull.sh
+    # update staging env, replace LINOAPP_CHART_NAME to JOBS_CHART_NAME if deploy cronjob
+#    - release.sh $REPO_NAME $CHART_NAME $ECR_NAME $CHART_VERSION $DOCKER_TAG $REPOSITORY $LINOAPP_CHART_NAME
+    - patch_value.sh $CHART_NAME $DOCKER_TAG $ENVIRONMENT $LIVESTREAM_CHART_NAME
+    - ([[ ! -z "$CHART_VERSION" ]]) && patch_chart.sh $CHART_NAME $CHART_VERSION $ENVIRONMENT $LIVESTREAM_CHART_NAME
+    - push.sh $CHART_NAME $ECR_NAME $DOCKER_TAG $REPOSITORY
   dependencies:
     - helm
