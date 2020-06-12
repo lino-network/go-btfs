@@ -4,7 +4,7 @@ variables:
   CHART_NAME: go-btfs
   COMMIT_SHA: ${CI_COMMIT_SHA}
   TAG: ${CI_COMMIT_TAG}
-  LIVESTREAM_CHART_NAME: stream
+  LIVESTREAM_CHART_NAME: livestream
   LINOAPP_DOOR_CHART_NAME: linoapp-door
 
 before_script:
